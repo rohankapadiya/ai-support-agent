@@ -5,6 +5,7 @@ import { Bot, Info, Package, RotateCcw, SendHorizonal, ShoppingBag } from "lucid
 import ChatMessage, { type Msg } from "./components/ChatMessage";
 import { type Action, Capabilities, CantBox, QuickChips } from "./components/Capabilities";
 import SidePanel, { type Customer } from "./components/SidePanel";
+import ServerStatus, { useBackendStatus } from "./components/ServerStatus";
 
 const API = process.env.NEXT_PUBLIC_API_URL;
 
@@ -19,6 +20,7 @@ export default function Home() {
   const [refreshKey, setRefreshKey] = useState(0);
   const bottom = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { status, elapsed } = useBackendStatus();
 
   const me = customers.find((c) => c.id === cid);
   const initials = me ? me.name.split(" ").map((w) => w[0]).join("") : "?";
@@ -27,9 +29,13 @@ export default function Home() {
     fetch(`${API}/customers`).then((r) => r.json()).then(setCustomers).catch(() => {});
   }
 
+  // Load data as soon as the server is confirmed live (also fires after a cold start)
   useEffect(() => {
-    loadCustomers();
-  }, []);
+    if (status === "live") {
+      loadCustomers();
+      setRefreshKey((k) => k + 1);
+    }
+  }, [status]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth" });
@@ -110,9 +116,7 @@ export default function Home() {
               </div>
               <div>
                 <h1 className="text-base font-semibold leading-tight text-white">Support Assistant</h1>
-                <p className="flex items-center gap-1.5 text-xs text-gray-400">
-                  <span className="size-1.5 rounded-full bg-emerald-400" /> Online
-                </p>
+                <ServerStatus status={status} elapsed={elapsed} />
               </div>
             </div>
             <div className="flex items-center gap-2">
